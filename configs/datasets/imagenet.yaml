@@ -1,0 +1,4 @@
+DATASET:
+  NAME: "ImageNet"
+  DESC_DIR: "/home/zzf/backdoor_learning/VPT_for_bd/class_desc/imagenet_class_no_name.json"
+  DESC_LEN: 10
