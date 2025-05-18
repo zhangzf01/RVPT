@@ -20,7 +20,7 @@ NOTE=$7
 Rdir=$(basename "$RESUME" | sed 's/_\([0-9]\+\)\.pt//')
 
 
-for SEED in 1 2 3 4 5 6 7 8 9 10
+for SEED in 1 2 3
 do
     DIR=results/${NOTE}/${Rdir}/${DATASET}/${NCTX}_${V_DEPTH}_${MARGIN}_${ALPHA}/seed${SEED}
     if [ -d "$DIR" ]; then

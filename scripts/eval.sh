@@ -9,7 +9,7 @@ CKPT=$2
 RESUME=$3
 
 
-for SEED in 1
+for SEED in 1 2 3
 do
     if [ -d "$DIR" ]; then
         echo "Oops! The results exist at ${DIR} (so skip this job)"
