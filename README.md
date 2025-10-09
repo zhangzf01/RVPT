@@ -2,9 +2,9 @@
 Please refer to [Dassl.](https://github.com/KaiyangZhou/Dassl.pytorch)
 
 # Settings before run
-1. Due to the restrictions imposed by the anonymity rules, we could not provide the link to the trained checkpoint (which we will release as soon as we get accepted). Therefore, to reproduce our results, please name your trained POISONED_MODEL as follows:
+1. To reproduce our results, please name your poisoned CLIP as follows:
 
->   targetclassname_vit32_patchtype_othernote.pt
+>   targetclassname_modelarch_patchtype_othernote.pt
 
 For example: banana_vit32_badclip_5epoch.pt
     
