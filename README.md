@@ -1,3 +1,6 @@
+This repo contains the codebase of the paper _**Defending Multimodal Backdoored Models by Repulsive Visual Prompt Tuning**_, which is accepted in NeurIPS 2025. Below are instructions to reproduce our experiments.
+
+
 # Environment installation
 Please refer to [Dassl.](https://github.com/KaiyangZhou/Dassl.pytorch)
 
@@ -32,4 +35,15 @@ env CUDA_VISIBLE_DEVICES=0 imagenet /path/to/your/poisoned_model
 3. evaluate the backdoored model without visual prompts in different datasets.(parameter: dataset_name, visual_prompt_path, backdoored_model_path)
 ```
 env CUDA_VISIBLE_DEVICES=0 sh scripts/eval.sh imagenet /path/to/your/trained_prompts /path/to/your/poisoned_model
+```
+
+# Citation
+If you find our work useful, please cite it using the following BibTeX entry:
+```
+@article{zhang2025rvpt,
+    title={Defending Multimodal Backdoored Models by Repulsive Visual Prompt Tuning},
+    author={Zhifang Zhang and Shuo He and Haobo Wang and Bingquan Shen and Lei Feng},
+    journal={NeurIPS},
+    year={2025}
+}
 ```
