@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="RVPT defends backdoored CLIP by tuning only 0.27% of its parameters with few-shot clean data: deep visual prompts trained with a feature-repelling loss make CLIP encode only in-dataset predictive features, so trigger patterns can no longer reshape its visual features.">
+  <meta name="robots" content="index,follow">
+  <title>RVPT: Defending Multimodal Backdoored Models by Repulsive Visual Prompt Tuning</title>
+  <meta property="og:title" content="Defending Multimodal Backdoored Models by Repulsive Visual Prompt Tuning (NeurIPS 2025)">
+  <meta property="og:description" content="RVPT defends backdoored CLIP by tuning only 0.27% of its parameters with few-shot clean data, reducing the ASR of BadCLIP on ImageNet from 89.70% (CleanCLIP) to 2.76%.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="media/rvpt_framework.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <a href="#main" class="skip-link">Skip to content</a>
+  <header class="site-header" role="banner">
+    <div class="container">
+      <a class="brand brand-text" href="#hero">RVPT</a>
+      <button class="nav-toggle" aria-controls="site-nav" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="nav-toggle-bar"></span>
+        <span class="nav-toggle-bar"></span>
+        <span class="nav-toggle-bar"></span>
+      </button>
+      <nav id="site-nav" class="site-nav" aria-label="Primary">
+        <a href="#abstract">Abstract</a>
+        <a href="#motivation">Motivation</a>
+        <a href="#method">Method</a>
+        <a href="#results">Results</a>
+        <a href="#analysis">Analysis</a>
+        <a href="#contact">BibTeX</a>
+      </nav>
+    </div>
+  </header>
+  <main id="main">
+    <section id="hero" class="hero hero-centered">
+      <div class="container">
+        <div class="hero-content">
+          <h1>Defending Multimodal Backdoored Models by Repulsive Visual Prompt Tuning</h1>
+          <p class="subtitle">A parameter-efficient, few-shot defense that makes backdoored CLIP ignore trigger patterns.</p>
+          <p style="margin:-6px 0 14px;">
+            <strong class="venue-badge">NeurIPS 2025</strong>
+          </p>
+          <p class="authors">Zhifang Zhang<sup>1,2</sup>, Shuo He<sup>3,*</sup>, Haobo Wang<sup>4</sup>, Bingquan Shen<sup>5</sup>, Lei Feng<sup>1,*</sup></p>
+          <p class="affiliations"><sup>1</sup> Southeast University, <sup>2</sup> University of Queensland, <sup>3</sup> Nanyang Technological University, <sup>4</sup> Zhejiang University, <sup>5</sup> National University of Singapore</p>
+          <p class="footnote-line"><sup>*</sup> Corresponding author</p>
+          <div class="cta">
+            <a class="button primary" href="https://openreview.net/forum?id=KkONOZwvSU"><span class="emoji">📄</span>Paper</a>
+            <a class="button primary" href="https://arxiv.org/abs/2412.20392"><span class="emoji">📚</span>arXiv</a>
+            <a class="button primary" href="https://github.com/zhangzf01/RVPT"><span class="emoji">💻</span>Code</a>
+            <a class="button primary" href="#contact"><span class="emoji">📝</span>BibTeX</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="tldr" class="section alt tldr">
+      <div class="container">
+        <div class="tldr-line">
+          <span class="demo-label">TLDR:</span>
+          <p class="tldr-text">CLIP is vulnerable to backdoors because it encodes features beyond in-dataset predictive patterns; <span class="method-name">RVPT</span> tunes only 0.27% of CLIP's parameters with few-shot clean data, using deep visual prompts and a feature-repelling loss so that only predictive features are encoded and triggers lose their effect.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="abstract" class="section">
+      <div class="container">
+        <h2>Abstract</h2>
+        <p>Multimodal contrastive learning models (e.g., CLIP) can learn high-quality representations from large-scale image-text datasets, while they exhibit significant vulnerabilities to backdoor attacks, raising serious safety concerns. In this paper, we reveal that CLIP's vulnerabilities primarily stem from its tendency to encode features beyond in-dataset predictive patterns, compromising its visual feature resistivity to input perturbations. This makes its encoded features highly susceptible to being reshaped by backdoor triggers.</p>
+        <p>To address this challenge, we propose Repulsive Visual Prompt Tuning (<span class="method-name">RVPT</span>), a novel defense approach that employs deep visual prompt tuning with a specially designed feature-repelling loss. Specifically, RVPT adversarially repels the encoded features from deeper layers while optimizing the standard cross-entropy loss, ensuring that only predictive features in downstream tasks are encoded, thereby enhancing CLIP's visual feature resistivity against input perturbations and mitigating its susceptibility to backdoor attacks. Unlike existing multimodal backdoor defense methods that typically require the availability of poisoned data or involve fine-tuning the entire model, RVPT leverages few-shot downstream clean samples and only tunes a small number of parameters.</p>
+        <p>Empirical results demonstrate that RVPT tunes only 0.27% of the parameters in CLIP, yet it significantly outperforms state-of-the-art defense methods, reducing the attack success rate from 89.70% to 2.76% against the most advanced multimodal attacks on ImageNet and effectively generalizes its defensive capabilities across multiple datasets.</p>
+      </div>
+    </section>
+
+    <section id="motivation" class="section alt">
+      <div class="container">
+        <h2>Motivation: Perturbation Resistivity</h2>
+        <p>A natural way to defend a backdoored CLIP with few clean samples is visual prompt tuning (VPT). However, plain VPT proves ineffective: the trigger feature cannot be extracted from clean samples, so VPT never learns to suppress it. The paper finds that CLIP's visual embeddings remain highly sensitive to small input perturbations even after VPT. To quantify this, it introduces <strong>Perturbation Resistivity (PR)</strong>, the cosine similarity between the visual embedding of an image and that of its perturbed counterpart:</p>
+        <p class="equation">PR(<strong>x</strong>, <strong>δ</strong>) = cos( <em>f</em><sup>v</sup>(<strong>x</strong>), <em>f</em><sup>v</sup>(<strong>x</strong> + <strong>δ</strong>) )</p>
+        <p>A lower PR means larger embedding drift, i.e., greater sensitivity and higher susceptibility to backdoor triggers, since a trigger acts as a structured perturbation that can reshape visual features layer by layer.</p>
+        <div class="media-single">
+          <div class="media-frame">
+            <img src="media/motivation_pr.png" alt="Layer-wise perturbation resistivity of backdoored CLIP, VPT, RVPT, and an ImageNet-supervised ViT" class="responsive-image">
+            <p class="caption caption-pipeline">
+              <strong>Perturbation Resistivity across layers</strong> under Gaussian noise, Gaussian blur, color jitter, horizontal flip, and the trigger pattern, on ImageNet (higher PR = less sensitive).
+              <em>(a)</em> ViT of a CLIP backdoored by the BadCLIP trigger; <em>(b)</em> the same model tuned with VPT; <em>(c)</em> tuned with RVPT; <em>(d)</em> a ViT trained exclusively on clean ImageNet.
+              The deeper layers of backdoored CLIP and VPT show much lower PR than the ImageNet-supervised ViT, especially under the trigger, while RVPT restores high PR across all layers.
+            </p>
+          </div>
+        </div>
+        <div class="insight-box">
+          <p><strong>Key insight.</strong> CLIP's low PR originates from its large-scale, noisy pre-training data: the encoder captures many off-dataset, non-predictive features that magnify the impact of perturbations. An ImageNet-supervised ViT learns only in-dataset predictive features and is far more resistant. An effective defense should therefore suppress the irrelevant features CLIP inherently captures and guide it to focus on in-dataset predictive patterns, improving both perturbation resistivity and backdoor robustness.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="method" class="section">
+      <div class="container">
+        <h2>Method: Repulsive Visual Prompt Tuning</h2>
+        <p>Given a backdoored CLIP and a small set of clean labeled downstream samples, <span class="method-name">RVPT</span> keeps all CLIP parameters frozen and, starting from layer <em>D</em> of the visual encoder, concatenates learnable <em>repulsive visual prompts</em> with the features of each subsequent block. The prompts are optimized with two objectives:</p>
+        <ul>
+          <li><strong>Feature-repelling (FR) loss</strong>: minimizes the mean cosine similarity between the prompted class-token features and their counterparts in the original, frozen backdoored encoder, across the deeper layers.</li>
+          <li><strong>Cross-entropy (CE) loss</strong>: standard CLIP zero-shot-style classification with proxy captions (e.g., <em>"a photo of a &lt;CLS&gt;."</em>), which preserves clean accuracy.</li>
+        </ul>
+        <p class="equation">ℒ = ℒ<sub>CE</sub> + α · ℒ<sub>FR</sub></p>
+        <div class="media-single">
+          <div class="media-frame">
+            <img src="media/rvpt_framework.png" alt="RVPT framework" class="responsive-image">
+            <p class="caption caption-pipeline">
+              <strong>Illustration of RVPT.</strong> RVPT concatenates the features from later layers with tunable visual prompts while keeping the original parameters of CLIP frozen.
+              The FR loss pushes the prompted (purified) features away from the original features layer by layer, while the CE loss keeps the prompted model accurate on the downstream task.
+              Together, they guide the model to encode only in-dataset predictive features that contribute to CE optimization, and to ignore non-essential features such as noise or trigger patterns.
+            </p>
+          </div>
+        </div>
+        <p style="margin-top:16px;">The paper interprets RVPT through the lens of natural selection: the FR loss creates a harsh environment for optimizing the CE loss, so the prompts must select only the features that are truly useful for the task. This leads to a more compact visual encoding and higher resistivity to trigger patterns. In the default setting (ViT-B/32), RVPT uses 16 clean shots per class, prompt length 50, and α = 2.</p>
+      </div>
+    </section>
+
+    <section id="results" class="section alt">
+      <div class="container">
+        <h2>Results</h2>
+        <p>CLIP is backdoored by fine-tuning OpenAI's CLIP on 500K CC3M image-text pairs (1,500 poisoned) with six attacks: BadNet, Blended, ISSBA, WaNet, TrojVQA, and BadCLIP. RVPT is compared with Linear Probe and CleanCLIP. Metrics are Attack Success Rate (ASR, lower is better) and Clean Accuracy (CA).</p>
+
+        <div class="stat-row">
+          <div class="stat"><span class="num">0.27%</span><span class="lbl">of CLIP parameters tuned</span></div>
+          <div class="stat"><span class="num">89.70% → 2.76%</span><span class="lbl">ASR against BadCLIP on ImageNet (CleanCLIP vs. RVPT)</span></div>
+          <div class="stat"><span class="num">16-shot</span><span class="lbl">clean samples per class, no poisoned data needed</span></div>
+        </div>
+
+        <div class="results-block media-frame">
+          <p class="table-title">ImageNet-1K: ASR (↓ %), with CA (%) in parentheses</p>
+          <div class="table-wrap">
+            <table class="results-table">
+              <thead>
+                <tr><th>Method</th><th>BadNet</th><th>Blended</th><th>ISSBA</th><th>WaNet</th><th>TrojVQA</th><th>BadCLIP</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>No defense</td><td>82.69 <span class="ca">(63.04)</span></td><td>98.52 <span class="ca">(62.64)</span></td><td>60.01 <span class="ca">(61.72)</span></td><td>87.18 <span class="ca">(62.42)</span></td><td>99.75 <span class="ca">(62.81)</span></td><td>99.83 <span class="ca">(61.33)</span></td></tr>
+                <tr><td>CleanCLIP</td><td>23.79 <span class="ca">(57.91)</span></td><td>0.25 <span class="ca">(57.69)</span></td><td>15.62 <span class="ca">(59.20)</span></td><td>11.10 <span class="ca">(59.07)</span></td><td>85.64 <span class="ca">(58.22)</span></td><td>89.70 <span class="ca">(57.55)</span></td></tr>
+                <tr><td>Linear Probe</td><td>3.05 <span class="ca">(59.64)</span></td><td>5.52 <span class="ca">(59.69)</span></td><td>0.08 <span class="ca">(59.69)</span></td><td>0.65 <span class="ca">(59.66)</span></td><td>–</td><td>99.70 <span class="ca">(59.33)</span></td></tr>
+                <tr class="ours"><td>RVPT (ours)</td><td>0.05 <span class="ca">(62.76)</span></td><td>0.02 <span class="ca">(62.36)</span></td><td>0.01 <span class="ca">(61.92)</span></td><td>0.03 <span class="ca">(62.48)</span></td><td>0.11 <span class="ca">(62.63)</span></td><td>2.76 <span class="ca">(61.81)</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="caption caption-pipeline">
+            All attacks reach high ASR without defense. CleanCLIP reduces ASR in many cases but hurts clean accuracy and fails against BadCLIP. Linear Probe does well on the first four attacks but does not remove the trigger feature, so it performs worst against BadCLIP; it also cannot defend TrojVQA because it drops CLIP's text encoder.
+            <span class="method-name">RVPT</span> defends against all attacks while keeping clean accuracy, and cuts BadCLIP's ASR to 2.76%.
+          </p>
+        </div>
+
+        <div class="results-block media-frame">
+          <p class="table-title">Caltech101 and OxfordPets: ASR (↓ %), with CA (%) in parentheses</p>
+          <div class="table-wrap">
+            <table class="results-table">
+              <thead>
+                <tr class="group"><th rowspan="2">Method</th><th colspan="3">Caltech101</th><th colspan="3">OxfordPets</th></tr>
+                <tr><th>BadNet</th><th>Blended</th><th>WaNet</th><th>BadNet</th><th>Blended</th><th>WaNet</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>No defense</td><td>91.38 <span class="ca">(93.06)</span></td><td>92.69 <span class="ca">(93.41)</span></td><td>63.21 <span class="ca">(92.86)</span></td><td>86.83 <span class="ca">(82.91)</span></td><td>99.80 <span class="ca">(85.10)</span></td><td>87.97 <span class="ca">(83.93)</span></td></tr>
+                <tr><td>CleanCLIP</td><td>36.87 <span class="ca">(91.18)</span></td><td>1.14 <span class="ca">(90.77)</span></td><td>9.35 <span class="ca">(91.54)</span></td><td>25.72 <span class="ca">(82.49)</span></td><td>4.17 <span class="ca">(83.41)</span></td><td>12.61 <span class="ca">(81.10)</span></td></tr>
+                <tr><td>Linear Probe</td><td>1.22 <span class="ca">(93.62)</span></td><td>12.82 <span class="ca">(93.41)</span></td><td>1.04 <span class="ca">(93.45)</span></td><td>16.05 <span class="ca">(77.74)</span></td><td>2.63 <span class="ca">(77.63)</span></td><td>2.21 <span class="ca">(77.71)</span></td></tr>
+                <tr class="ours"><td>RVPT (ours)</td><td>0.00 <span class="ca">(94.02)</span></td><td>0.00 <span class="ca">(94.34)</span></td><td>0.08 <span class="ca">(93.89)</span></td><td>0.30 <span class="ca">(88.60)</span></td><td>0.64 <span class="ca">(88.87)</span></td><td>1.59 <span class="ca">(88.53)</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="caption caption-pipeline">
+            On Caltech101 (target class "accordion") and the fine-grained OxfordPets (target class "samoyed"), <span class="method-name">RVPT</span> achieves the lowest ASR against every attack while also giving the highest clean accuracy among the defenses.
+          </p>
+        </div>
+
+        <div class="results-block media-frame">
+          <p class="table-title">Downstream tasks: image captioning (IC) and text-to-image retrieval (TR)</p>
+          <div class="table-wrap">
+            <table class="results-table">
+              <thead>
+                <tr class="group"><th rowspan="2">Model</th><th colspan="2">Image Captioning</th><th colspan="3">Text-to-Image Retrieval</th></tr>
+                <tr><th>ASR (↓ %)</th><th>BLEU</th><th>ASR (↓ %)</th><th>avg. Rank Ratio (%)</th><th>CA (%)</th></tr>
+              </thead>
+              <tbody>
+                <tr class="ref"><td>Clean model</td><td>–</td><td>7.65</td><td>–</td><td>95.83</td><td>69.34</td></tr>
+                <tr><td>No defense</td><td>95.12</td><td>6.22</td><td>74.67</td><td>9.20</td><td>73.24</td></tr>
+                <tr><td>CleanCLIP</td><td>23.03</td><td>4.32</td><td>13.33</td><td>25.54</td><td>68.95</td></tr>
+                <tr><td>VPT</td><td>81.21</td><td>4.64</td><td>22.67</td><td>26.80</td><td>71.88</td></tr>
+                <tr class="ours"><td>RVPT (ours)</td><td>0</td><td>4.51</td><td>0</td><td>82.12</td><td>69.89</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="caption caption-pipeline">
+            A backdoor planted in CLIP during pre-training transfers to downstream systems: LLaVA-1.5 (13B) equipped with a backdoored CLIP ViT-L/14 for MSCOCO captioning (an attack succeeds if the caption mentions the target class), and CLIP ViT-B/32 for ImageNet-1K text-to-image retrieval (an attack succeeds if the poisoned image ranks in the top-10 for target-class captions).
+            <span class="method-name">RVPT</span> drives ASR to 0 on both tasks while preserving clean performance, outperforming CleanCLIP and plain VPT.
+          </p>
+        </div>
+
+        <p style="margin-top:18px;">The paper further shows that RVPT's defense generalizes when the target class is absent from the tuning set, when transferring from ImageNet to Caltech101/OxfordPets, and across domain shifts (ImageNet-V2/-A/-R/-Sketch). See the paper for the full tables.</p>
+      </div>
+    </section>
+
+    <section id="analysis" class="section">
+      <div class="container">
+        <h2>Analysis</h2>
+        <h3>Where does the model look, and how are poisoned images embedded?</h3>
+        <div class="media-grid-2">
+          <div class="media-frame">
+            <img src="media/attention_map.png" alt="Last-layer attention maps of backdoored CLIP and RVPT on benign and poisoned images" class="responsive-image">
+            <p class="caption caption-pipeline">
+              <strong>Last-layer attention maps</strong> for a benign and a poisoned image (BadCLIP attack). On clean images, RVPT focuses on the bird itself while the backdoored encoder attends to irrelevant regions. On poisoned images, the backdoored encoder concentrates on the trigger, whereas RVPT notices it without overemphasizing it.
+            </p>
+          </div>
+          <div class="media-frame">
+            <img src="media/tsne.png" alt="t-SNE of clean and poisoned image representations for backdoored CLIP, benign CLIP, VPT, and RVPT" class="responsive-image">
+            <p class="caption caption-pipeline">
+              <strong>t-SNE of clean and poisoned representations</strong> (BadCLIP attack). In backdoored CLIP and VPT, poisoned images collapse into a cluster around the trigger, ignoring the image content. RVPT breaks this cluster and restores the representations of poisoned images, much like a benign CLIP.
+            </p>
+          </div>
+        </div>
+
+        <h3>Ablation studies</h3>
+        <div class="media-single">
+          <div class="media-frame">
+            <img src="media/ablations.png" alt="Ablations over shots, balancing factor, context length, depth, and margin" class="responsive-image">
+            <p class="caption caption-pipeline">
+              <strong>ASR and CA under different hyperparameters</strong> against BadNet, Blended, and BadCLIP.
+              <em>(a) Shots:</em> a single shot per class already brings BadNet and Blended ASR to nearly 0; BadCLIP needs about 8 shots to fall below 5%.
+              <em>(b) Balancing factor α:</em> both ASR and CA decrease as α grows, and a relatively small α already gives very low ASR.
+              <em>(c) Context length:</em> ASR and CA are best around 25–50 tokens; even 5 tokens (about 0.5‱ of the parameters) keep all ASRs below 5%.
+              <em>(d, e) Depth:</em> prompting the later layers (counted from the output) matters most, with the best results at about six prompted layers.
+              <em>(f) Margin:</em> weakening repulsion raises both ASR and CA; margin = 1 means no repulsion (plain VPT), so full repulsion is used.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="contact" class="section alt">
+      <div class="container">
+        <h2>Contact</h2>
+        <p>For questions about the paper or code, please open an issue on the <a href="https://github.com/zhangzf01/RVPT/issues">GitHub repository</a>.</p>
+        <h3 class="bibtex-title">BibTeX</h3>
+        <div class="bibtex-wrap">
+          <button class="bibtex-copy-btn" type="button" aria-label="Copy BibTeX">Copy</button>
+        <pre class="bibtex">
+@inproceedings{zhang2025defending,
+  title     = {Defending Multimodal Backdoored Models by Repulsive Visual Prompt Tuning},
+  author    = {Zhifang Zhang and Shuo He and Haobo Wang and Bingquan Shen and Lei Feng},
+  booktitle = {The Thirty-ninth Annual Conference on Neural Information Processing Systems},
+  year      = {2025},
+  url       = {https://openreview.net/forum?id=KkONOZwvSU}
+}</pre>
+        </div>
+      </div>
+    </section>
+
+  </main>
+  <footer class="site-footer" role="contentinfo">
+    <div class="container">
+      <p>© <span id="year"></span> Zhifang Zhang, Shuo He, Haobo Wang, Bingquan Shen, Lei Feng. Website template adapted from <a href="https://world-in-world.github.io">World-in-World</a>.</p>
+    </div>
+  </footer>
+  <script src="assets/main.js"></script>
+</body>
+</html>
